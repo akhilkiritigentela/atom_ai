@@ -13,9 +13,11 @@ Environment variables (only for the services you use):
   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER, TWILIO_TO_NUMBER
 
 If no microphone / SpeechRecognition is available, ATOM switches to typed commands.
+Say 'hey ATOM' to wake it, 'you can sleep now' to sleep, 'thank you' to quit.
+Extra optional packages: numpy, speedtest-cli. Optional env var: MOBILE_CAM_URL.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -24,6 +26,7 @@ from pathlib import Path
 from urllib.parse import quote_plus
 import operator
 import os
+import random
 import re
 import smtplib
 import subprocess
@@ -50,6 +53,8 @@ pywhatkit = _optional(lambda: __import__("pywhatkit"))
 wolframalpha = _optional(lambda: __import__("wolframalpha"))
 search_wikihow = _optional(lambda: __import__("pywikihow", fromlist=["search_wikihow"]).search_wikihow)
 Client = _optional(lambda: __import__("twilio.rest", fromlist=["Client"]).Client)
+np = _optional(lambda: __import__("numpy"))
+speedtest = _optional(lambda: __import__("speedtest"))
 
 try:
     from pypdf import PdfReader
@@ -69,6 +74,15 @@ APP_PATHS = {
 PERSONAL_FOLDER = os.path.expanduser(r"~\OneDrive\Desktop\My folder")
 REQUEST_TIMEOUT = 10
 IS_WINDOWS = sys.platform == "win32"
+OWNER_NAME = "Akhil Kiriti"
+DESIGNER_PATH = r"C:\Users\home\AppData\Local\Programs\Python\Python39\Lib\site-packages\qt5_applications\Qt\bin\designer.exe"
+MUSIC_DIR = os.path.expanduser(r"~\OneDrive\Desktop\My folder\Jarvis\songs")
+MY_SONGS_URL = "https://www.youtube.com/watch?v=P7xcbaY6DSQ&list=PLRHacUjo_MhPfzulUsX_9PjH7lWCiWEeP"
+MY_SITE_URL = "https://www.amplussolutions.in"
+MOBILE_CAM_URL = os.environ.get("MOBILE_CAM_URL", "http://192.168.1.6:8080/shot.jpg")
+NEWS_QUERY = "tesla"
+NEWS_COUNT = 10
+WAKE_WORDS = {"atom", "hey", "hi", "hello"}
 
 # ---------- Text to speech ----------
 engine = None
@@ -122,6 +136,8 @@ def take_command():
         query = recognizer.recognize_google(audio, language="en-IN")
         print(f"You said: {query}")
         return query.strip().lower()
+    except sr.WaitTimeoutError:
+        return ""
     except Exception as exc:
         print(f"[Could not recognise speech: {exc}]")
         return ""
@@ -207,8 +223,8 @@ def get_news():
     try:
         response = requests.get(
             "https://newsapi.org/v2/everything",
-            params={"q": "science OR technology", "sortBy": "publishedAt",
-                    "language": "en", "pageSize": 5, "apiKey": api_key},
+            params={"q": NEWS_QUERY, "sortBy": "publishedAt",
+                    "language": "en", "pageSize": NEWS_COUNT, "apiKey": api_key},
             timeout=REQUEST_TIMEOUT,
         )
         response.raise_for_status()
@@ -511,6 +527,202 @@ def press_key(key):
         pyautogui.press(key)
 
 
+# ---------- Extra features (ported from the original ATOM script) ----------
+ALARMS = []
+
+CHATTER = [
+    (("what's your name", "what is your name"), "My friends call me ATOM the Great."),
+    (("who made you", "who created you", "made you"), f"My creator and master is {OWNER_NAME}."),
+    (("how are you",), f"I am fine, thank you. How are you, boss?"),
+    (("will you be my gf", "will you be my bf"), "I am an Artificial Intelligence, I am smarter than you."),
+    (("who am i",), "If you talk, then definitely you are human."),
+    (("truth",), "I'm not sure I can handle it."),
+    (("what do you look like",), "Imagine the feeling of a friendly hug combined with the sound of laughter."),
+    (("who are you",), f"Did I forget to introduce myself? I am A.T.O.M., personal assistant of {OWNER_NAME}."),
+]
+
+
+def chatter_reply(q):
+    if q in {"fine", "i am fine", "i'm fine", "good", "i am good", "i'm good"}:
+        speak("It's good to know that you are fine.")
+        return True
+    for triggers, reply in CHATTER:
+        if any(t in q for t in triggers):
+            speak(reply)
+            return True
+    return False
+
+
+def what_can_you_do():
+    speak("I can tell you the time and date, search the web, read the news, send emails and "
+          "text messages, make a call, open websites and apps, set alarms, play music, "
+          "take screenshots, read PDFs, answer questions, and much more.")
+
+
+def open_website():
+    speak("Which website do you want to open?")
+    name = take_command().replace(" dot ", ".").replace(" ", "")
+    if not name:
+        return
+    url = f"https://www.{name}" if "." in name else f"https://www.{name}.com"
+    webbrowser.open_new(url)
+
+
+def instagram_profile():
+    username = input("Instagram username: ").strip().lstrip("@")
+    if not re.fullmatch(r"[A-Za-z0-9._]{1,30}", username):
+        speak("That doesn't look like a valid username.")
+        return
+    webbrowser.open_new_tab(f"https://www.instagram.com/{username}/?hl=en")
+    speak(f"Here is the profile of {username}.")
+
+
+def hide_or_show_folder():
+    if not IS_WINDOWS:
+        speak("Hiding folders is only supported on Windows.")
+        return
+    folder = Path(input("Folder path: ").strip().strip('"')).expanduser()
+    if not folder.is_dir():
+        speak("I could not find that folder.")
+        return
+    speak("Do you want to hide it or make it visible?")
+    choice = take_command()
+    if "hide" in choice:
+        flag, done = "+h", "All files in that folder are hidden now."
+    elif "visible" in choice or "show" in choice:
+        flag, done = "-h", "All files in that folder are visible now."
+    else:
+        speak("Okay, leaving it as it is.")
+        return
+    if not confirm(f"Apply '{flag}' to everything inside {folder}?"):
+        speak("Cancelled.")
+        return
+    subprocess.run(["attrib", flag, "/s", "/d", str(folder / "*")], check=False)
+    speak(done)
+
+
+def parse_alarm_time(text):
+    text = text.lower().replace(".", "").replace("a m", "am").replace("p m", "pm")
+    text = re.sub(r"\b(set|the|alarm|to|for|at)\b", " ", text)
+    text = re.sub(r"(\d)\s+(\d{2})\b", r"\1:\2", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    parsed = None
+    for fmt in ("%I:%M %p", "%I:%M%p", "%I %p", "%I%p", "%H:%M"):
+        try:
+            parsed = datetime.strptime(text, fmt).time()
+            break
+        except ValueError:
+            continue
+    if parsed is None:
+        return None
+    now = datetime.now()
+    target = datetime.combine(now.date(), parsed)
+    if target <= now:
+        target += timedelta(days=1)
+    return target
+
+
+def set_alarm(query=""):
+    text = query
+    if not re.search(r"\d", text):
+        speak("Please tell me the alarm time, for example 7:30 am.")
+        text = take_command()
+    target = parse_alarm_time(text)
+    if target is None:
+        speak("I couldn't understand that time. Try something like 7:30 am.")
+        return
+    ALARMS.append(target)
+    speak(f"Alarm set for {target:%I:%M %p}.")
+
+
+def check_alarms():
+    now = datetime.now()
+    for target in ALARMS[:]:
+        if now >= target:
+            ALARMS.remove(target)
+            for _ in range(3):
+                speak("Boss, your alarm is ringing!")
+
+
+def make_call():
+    if Client is None:
+        speak("Please install twilio to make calls.")
+        return
+    sid = require_env("TWILIO_ACCOUNT_SID")
+    token = require_env("TWILIO_AUTH_TOKEN")
+    from_number = require_env("TWILIO_FROM_NUMBER")
+    to_number = require_env("TWILIO_TO_NUMBER")
+    if not all((sid, token, from_number, to_number)):
+        return
+    if not confirm(f"Place a call to {to_number}?"):
+        speak("Call cancelled.")
+        return
+    try:
+        call = Client(sid, token).calls.create(
+            twiml="<Response><Say>This is a test message from ATOM.</Say></Response>",
+            from_=from_number, to=to_number)
+        print(f"Call SID: {call.sid}")
+        speak("The call has been placed.")
+    except Exception as exc:
+        print(f"[Call error: {exc}]")
+        speak("I could not place the call.")
+
+
+def mobile_camera():
+    if cv2 is None or np is None:
+        speak("Please install opencv-python and numpy to use the mobile camera.")
+        return
+    speak("Connecting to the mobile camera. Press Q in the video window to close it.")
+    try:
+        while True:
+            data = requests.get(MOBILE_CAM_URL, timeout=5).content
+            frame = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), -1)
+            if frame is None:
+                speak("I could not read the camera image.")
+                break
+            cv2.imshow("ATOM mobile cam", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+    except requests.RequestException:
+        speak("I couldn't reach the mobile camera. Check MOBILE_CAM_URL.")
+    finally:
+        cv2.destroyAllWindows()
+
+
+def internet_speed():
+    if speedtest is None:
+        speak("Please install speedtest-cli to test internet speed.")
+        return
+    speak("Testing your internet speed. This can take a minute.")
+    try:
+        st = speedtest.Speedtest()
+        down = st.download() / 1_000_000
+        up = st.upload() / 1_000_000
+        speak(f"Download speed is {down:.1f} megabits per second and upload speed is {up:.1f}.")
+    except Exception as exc:
+        print(f"[Speedtest error: {exc}]")
+        speak("I couldn't complete the speed test.")
+
+
+def play_local_music():
+    exts = {".mp3", ".wav", ".m4a", ".flac", ".ogg"}
+    folder = Path(MUSIC_DIR)
+    songs = [p for p in folder.iterdir() if p.suffix.lower() in exts] if folder.is_dir() else []
+    if not songs:
+        speak("I couldn't find local music. Update MUSIC_DIR, or tell me a song for YouTube.")
+        song = input("Song to play on YouTube (blank to cancel): ").strip()
+        if song and pywhatkit is not None:
+            pywhatkit.playonyt(song)
+        return
+    choice = random.choice(songs)
+    speak(f"Playing {choice.stem}.")
+    try:
+        open_path(choice)
+    except OSError as exc:
+        print(f"[Music error: {exc}]")
+        speak("I couldn't play that file.")
+
+
 # ---------- Command routing ----------
 def handle_command(query):
     """Handle one command. Returns False when ATOM should stop."""
@@ -601,6 +813,39 @@ def handle_command(query):
     elif "calculate" in q or (q.startswith("what is") and any(
             w in q for w in ("plus", "minus", "times", "divided", "multiplied", "power"))):
         calculate(q)
+    elif "open designer" in q:
+        if Path(DESIGNER_PATH).exists():
+            open_path(DESIGNER_PATH)
+        else:
+            speak("Qt Designer was not found. Update DESIGNER_PATH.")
+    elif "mobile cam" in q:
+        mobile_camera()
+    elif "open a website" in q or "open website" in q:
+        open_website()
+    elif "my songs" in q or "mysongs" in q:
+        webbrowser.open(MY_SONGS_URL)
+    elif "my site" in q:
+        webbrowser.open(MY_SITE_URL)
+    elif "instagram" in q:
+        instagram_profile()
+    elif "hide all folders" in q or "hide this folder" in q or "hide folder" in q:
+        hide_or_show_folder()
+    elif "alarm" in q:
+        set_alarm(q)
+    elif q.startswith("call ") or q == "call" or "make a call" in q or "phone call" in q:
+        make_call()
+    elif "internet speed" in q or "speed test" in q:
+        internet_speed()
+    elif "what can you do" in q:
+        what_can_you_do()
+    elif "play music" in q or "play song" in q:
+        play_local_music()
+    elif "the time" in q or "what time" in q or q == "time":
+        speak(f"The time is {datetime.now():%H:%M:%S}.")
+    elif "the date" in q or "today's date" in q or "what day" in q:
+        speak(f"Today is {datetime.now():%A, %d %B %Y}.")
+    elif chatter_reply(q):
+        pass
     elif "temperature" in q or "weather" in q:
         weather_search(q)
     elif "text message" in q or "send sms" in q:
@@ -630,10 +875,6 @@ def handle_command(query):
                 pywhatkit.playonyt(song)
     elif "write a note" in q:
         write_note()
-    elif "what's your name" in q or "what is your name" in q:
-        speak("My friends call me ATOM the Great.")
-    elif "the time" in q or q == "time":
-        speak(f"The time is {datetime.now():%H:%M:%S}.")
     elif q in {"thank you", "thanks", "thank you atom"}:
         speak("You're welcome, boss.")
     else:
@@ -641,15 +882,36 @@ def handle_command(query):
     return True
 
 
+def has_wake_word(text):
+    return bool(set(re.findall(r"[a-z']+", text.lower())) & WAKE_WORDS)
+
+
+def active_loop():
+    """Handle commands until the user tells ATOM to sleep."""
+    while True:
+        check_alarms()
+        query = take_command()
+        if query and not handle_command(query):
+            break
+
+
 def main():
     if TEXT_MODE:
         print("[No microphone/SpeechRecognition found - using typed commands. "
               "Type 'exit atom' to quit.]")
-    wish_me()
+        wish_me()
+        active_loop()
+        return
+    print("[Say 'hey ATOM' to wake me, 'you can sleep now' to sleep, 'thank you' to quit.]")
     while True:
-        query = take_command()
-        if query and not handle_command(query):
+        check_alarms()
+        heard = take_command()
+        if "thank you" in heard:
+            speak("Have a good day, boss.")
             break
+        if has_wake_word(heard):
+            wish_me()
+            active_loop()
 
 
 if __name__ == "__main__":
