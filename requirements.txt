@@ -1,22 +1,23 @@
-# Required for HTTP/API calls
+# ATOM voice assistant - install everything with:  pip install -r requirements.txt
+# Only "requests" is required; every other package is optional and just enables its feature.
+
 requests
 
-# Voice input and output
-SpeechRecognition
+# Voice
 pyttsx3
+SpeechRecognition
 PyAudio
 
-# Optional features used by ATOM
-opencv-python
-numpy
+# Features
 pyjokes
-PyAutoGUI
+pyautogui
 psutil
 wikipedia
 pywhatkit
 pypdf
-PyPDF2
 wolframalpha
-beautifulsoup4
 pywikihow
 twilio
+opencv-python
+numpy
+speedtest-cli
