@@ -4,11 +4,13 @@
 requests
 
 # Voice
+
 pyttsx3
 SpeechRecognition
 PyAudio
 
 # Features
+
 pyjokes
 pyautogui
 psutil
