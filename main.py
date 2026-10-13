@@ -87,11 +87,6 @@ except ImportError:
     wolframalpha = None
 
 try:
-    from bs4 import BeautifulSoup
-except ImportError:
-    BeautifulSoup = None
-
-try:
     from pywikihow import search_wikihow
 except ImportError:
     search_wikihow = None
