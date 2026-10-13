@@ -1,0 +1,22 @@
+# Required for HTTP/API calls
+requests
+
+# Voice input and output
+SpeechRecognition
+pyttsx3
+PyAudio
+
+# Optional features used by ATOM
+opencv-python
+numpy
+pyjokes
+PyAutoGUI
+psutil
+wikipedia
+pywhatkit
+pypdf
+PyPDF2
+wolframalpha
+beautifulsoup4
+pywikihow
+twilio
