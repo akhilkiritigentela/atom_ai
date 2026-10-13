@@ -1,5 +1,3 @@
-# atom_ai
-A personal Python voice assistant with speech recognition
 # ATOM — Personal Python Voice Assistant
 
 ## Overview
