@@ -1,52 +1,77 @@
 # ATOM — Personal Python Voice Assistant
 
-## Overview
+ATOM is a personal Python voice-assistant project exploring speech recognition, text-to-speech, command-based desktop utilities, and optional online-service integrations.
 
-ATOM is a personal voice-assistant project built using Python. It explores speech recognition, text-to-speech, and command-based desktop utilities.
+The project began as a tutorial-based learning project and was subsequently modified and reorganised. It is a learning project, not a claim of original AI/ML research.
 
-The project began as a tutorial-based learning project and was subsequently modified and reorganised.
-
-## Features
-
-The current code includes implementations for:
+## Features in the code
 
 - Speech recognition and text-to-speech
-- Opening applications and websites
-- Information lookup
-- Reading text from PDF documents
-- Taking screenshots and saving notes
-- Basic arithmetic calculations
-- Optional integrations for news, email and text messaging
+- Opening applications, websites, terminal, and file manager
+- Closing selected Windows applications with confirmation
+- Camera preview and screenshots
+- Wikipedia and WolframAlpha information lookup
+- News lookup through NewsAPI
+- Temperature search through a browser
+- PDF text reading
+- Basic arithmetic calculator
+- Email sending with optional file attachment
+- Optional SMS sending through Twilio
+- Public IP lookup and approximate IP-derived location
+- Battery status, volume controls and window switching
+- How-to lookup, YouTube playback, notes, jokes and time
 
-**Note:** These features are present in the code, but not all have been verified through runtime testing.
+**Important:** Features are present in the code but have not all been verified on your computer. External services require credentials and may have usage limits. Some application controls are Windows-specific.
 
-## Technologies
+## Requirements
 
-- Python
-- SpeechRecognition
-- pyttsx3
-- Requests
-- PyAutoGUI
-- OpenCV
-- Optional third-party API integrations
+Python 3.10 or newer is recommended. Install packages with:
 
-## Setup
+```bash
+python -m pip install -r requirements.txt
+```
 
-1. Install Python.
-2. Install the packages required by the features you want to use.
-3. Configure any required API credentials using environment variables.
-4. Run `main.py` from a terminal.
+PyAudio installation can differ by operating system. If microphone setup fails, follow the installation guidance for your OS and SpeechRecognition.
 
-We'll add additional setup instructions and a dependency list after testing.
+## Run
+
+```bash
+python main.py
+```
+
+Use a microphone for voice commands. Speech recognition uses an online service through SpeechRecognition and requires internet access.
+
+## Optional environment variables
+
+Configure only the integrations you intend to use:
+
+- `EMAIL_USER`
+- `EMAIL_PASS`
+- `NEWS_API_KEY`
+- `WOLFRAM_APP_ID`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_FROM_NUMBER`
+- `TWILIO_TO_NUMBER`
+
+Set these locally in your operating system or development environment. Never paste actual credentials into source code, README files, screenshots, or GitHub commits. For Gmail, use an app password where required, not your normal account password.
+
+## Configuration
+
+Review `APP_PATHS` and `PERSONAL_FOLDER` in `main.py` for paths specific to your computer. Avoid committing private paths.
+
+## Security and privacy
+
+- Keep the repository private until you have reviewed and tested the code.
+- Never commit passwords, API keys, tokens, personal documents, or private datasets.
+- If a real key or password was exposed, revoke or rotate it. Removing it from the latest file does not necessarily remove it from Git history.
+- Commands that send email/SMS or restart the computer should require explicit confirmation.
+- IP-based location is approximate and is not GPS.
 
 ## Development status
 
-This is a personal learning project. The code has undergone structural corrections, but full runtime testing and documentation are ongoing.
-
-## Security
-
-Never commit passwords, API keys, access tokens, or personal information. Configure external-service credentials locally through environment variables.
+This is a cleaned-up baseline. A syntax check does not prove runtime functionality. Test microphone, camera, email, APIs, SMS, and platform-specific commands on your own computer before relying on them.
 
 ## Acknowledgements
 
-This project builds on concepts and code patterns learned from Python tutorials and existing libraries. Specific sources will be credited where identified.
+The project uses third-party Python libraries and was informed by tutorial-based learning. Add specific tutorial/source acknowledgements once the original sources have been identified.
